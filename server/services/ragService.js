@@ -11,7 +11,7 @@ export const processRAG = async (text) => {
 
     // Use the correct model name - gemini-1.0-pro or gemini-pro
     const model = genAI.getGenerativeModel({
-      model: "Gemini 2.5 Flash‑Lite"  // Changed from "gemini-pro"
+      model: "gemini-2.5-flash-lite"  // Changed from "gemini-pro"
     });
 
     // Truncate text to avoid token limits
