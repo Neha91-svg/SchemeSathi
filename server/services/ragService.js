@@ -1,89 +1,85 @@
 // services/ragService.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Get API key from environment or use a test key
-const apiKey = process.env.GEMINI_API_KEY || "AIzaSyD_TEST_KEY_REPLACE_ME"; // Replace with your actual key
+const apiKey = process.env.GEMINI_API_KEY || "AIzaSyD_TEST_KEY_REPLACE_ME";
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export const processRAG = async (text) => {
   try {
     console.log("Using Gemini API with text length:", text.length);
 
-    // Use the correct model name - gemini-1.0-pro or gemini-pro
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite"  // Changed from "gemini-pro"
+      model: "gemini-2.5-flash-lite"
     });
 
-    // Truncate text to avoid token limits
-    const truncatedText = text.length > 10000 ? text.substring(0, 10000) + "..." : text;
+    const truncatedText =
+      text.length > 12000 ? text.substring(0, 12000) + "..." : text;
 
-    const prompt = `Analyze this government scheme document and provide:
-1. A comprehensive summary (about 200 words)
-2. ELI10 (Explain Like I'm 10) version in simple terms (about 100 words)
+    const prompt = `
+You are a senior government policy analyst AI.
 
-Document content:
-${truncatedText}
+First, carefully read the document.
+Second, identify sections like Benefits, Eligibility, Documents, Process, Warnings.
+Third, convert them into structured JSON.
 
-Please format your response as a valid JSON object with these exact keys:
+STRICT:
+- English only
+- Do not skip any field
+- If not found, write "Not clearly specified in the document"
+- benefits, eligibility, documents, steps, warning_notes must always be arrays.
+
+Return only this JSON:
+
 {
-  "summary": "detailed summary here",
-  "eli10": "simple explanation here"
+  "scheme_name": "",
+  "summary": "",
+  "benefits": [],
+  "eligibility": [],
+  "documents": [],
+  "steps": [],
+  "eli10": "",
+  "warning_notes": []
 }
 
-Return ONLY the JSON object, no additional text.`;
+Document:
+${truncatedText}
+`;
 
-    console.log("Sending request to Gemini API...");
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
+    let cleanText = response.text().trim();
 
-    console.log("Gemini response received:", responseText.substring(0, 200));
+    cleanText = cleanText.replace(/```json\s*/g, "").replace(/```\s*/g, "");
 
-    // Clean the response text
-    let cleanText = responseText.trim();
+    const parsed = JSON.parse(cleanText);
 
-    // Remove markdown code blocks if present
-    cleanText = cleanText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-
-    // Try to parse JSON
-    try {
-      const parsedResponse = JSON.parse(cleanText);
-      return parsedResponse;
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", parseError);
-      console.error("Raw response:", cleanText);
-
-      // Fallback: return as plain text
-      return {
-        summary: cleanText,
-        eli10: "Simplified explanation could not be generated. Please see the summary above."
-      };
-    }
-
-  } catch (error) {
-    console.error("Gemini API error details:", error.message);
-
-    // Check for specific errors
-    if (error.message.includes("API key")) {
-      throw new Error("Invalid or missing Gemini API key. Please set GEMINI_API_KEY in .env file.");
-    } else if (error.message.includes("404") || error.message.includes("not found")) {
-      throw new Error("Gemini model not found. Try using 'gemini-1.0-pro' or 'gemini-pro'.");
-    } else if (error.message.includes("quota") || error.message.includes("429")) {
-      throw new Error("Gemini API quota exceeded. Please check your Google AI Studio account.");
-    }
-
-    // Fallback to mock response for development
-    console.log("Falling back to mock response for development...");
-
-    // Mock response for testing
-    const mockResponse = {
-      summary: `Document successfully parsed (${text.length} characters). For AI analysis, please configure a valid API key. Key points extracted from text.`,
-      eli10: `This is a government scheme document. It contains important information about benefits and eligibility criteria. Please configure AI API for detailed analysis.`
+    // 🛡 Safety layer so UI never breaks
+    const safeResponse = {
+      scheme_name: parsed.scheme_name || "Government Scheme",
+      summary: parsed.summary || "",
+      benefits: Array.isArray(parsed.benefits) ? parsed.benefits : [],
+      eligibility: Array.isArray(parsed.eligibility) ? parsed.eligibility : [],
+      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+      steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+      eli10: parsed.eli10 || "",
+      warning_notes: Array.isArray(parsed.warning_notes) ? parsed.warning_notes : []
     };
 
-    return mockResponse;
+    return safeResponse;
 
-    // Or throw error: throw new Error(`AI processing failed: ${error.message}`);
+  } catch (error) {
+    console.error("Gemini API error:", error.message);
+
+    return {
+      scheme_name: "Government Scheme",
+      summary: "AI processing failed. Please check your API key or try again.",
+      benefits: [],
+      eligibility: [],
+      documents: [],
+      steps: [],
+      eli10: "Something went wrong while reading this document.",
+      warning_notes: []
+    };
   }
 };
