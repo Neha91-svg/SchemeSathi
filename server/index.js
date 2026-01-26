@@ -20,7 +20,14 @@ if (!fs.existsSync(uploadsDir)) {
 
 app.use("/api/upload", uploadRoutes);
 
-app.get("/", (req, res) => res.send("SchemeSaathi backend running ✅"));
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "SchemeSaathi backend healthy 🚀",
+    time: new Date().toISOString()
+  });
+});
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
