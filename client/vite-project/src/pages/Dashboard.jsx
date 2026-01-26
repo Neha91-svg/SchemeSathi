@@ -7,10 +7,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [english, setEnglish] = useState(null);
   const [hindi, setHindi] = useState(null);
-  const [lang, setLang] = useState("en"); // en | hi
+  const [lang, setLang] = useState("en"); // "en" | "hi"
   const [eligibilityInput, setEligibilityInput] = useState("");
   const [eligibilityResult, setEligibilityResult] = useState(null);
 
+  const BACKEND_URL = "https://schemesathi.onrender.com"; // ✅ Render backend
+
+  // ===== Upload PDF =====
   const handleUpload = async () => {
     if (!file) return alert("Please upload a PDF");
 
@@ -19,14 +22,13 @@ export default function Dashboard() {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/api/upload", formData);
-
+      const res = await axios.post(`${BACKEND_URL}/api/upload`, formData);
       setEnglish(res.data.english);
       setHindi(res.data.hindi);
       setLang("en");
       setEligibilityResult(null);
     } catch (err) {
-      alert("Upload failed");
+      alert("Upload failed. Try again!");
       console.error(err);
     } finally {
       setLoading(false);
@@ -35,13 +37,16 @@ export default function Dashboard() {
 
   const data = lang === "en" ? english : hindi;
 
-  /* ====== Extra Feature: Eligibility Checker (Mock AI) ====== */
+  // ===== Eligibility Checker =====
   const handleEligibilityCheck = () => {
     if (!eligibilityInput) return;
     if (!data || !data.eligibility) return alert("Upload PDF first");
 
     const input = eligibilityInput.toLowerCase();
-    const eligible = data.eligibility.filter(item => item.toLowerCase().includes(input));
+    const eligible = data.eligibility.filter(item =>
+      item.toLowerCase().includes(input)
+    );
+
     setEligibilityResult(
       eligible.length > 0
         ? `You may be eligible! Related criteria: ${eligible.join(", ")}`
@@ -49,7 +54,7 @@ export default function Dashboard() {
     );
   };
 
-  /* ====== Extra Feature: Text-to-Speech ====== */
+  // ===== Text-to-Speech =====
   const speakText = (text) => {
     if (!text) return;
     const utter = new SpeechSynthesisUtterance(text);
@@ -57,7 +62,7 @@ export default function Dashboard() {
     speechSynthesis.speak(utter);
   };
 
-  /* ====== Extra Feature: Download Summary ====== */
+  // ===== Download Summary =====
   const downloadSummary = () => {
     if (!data) return;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -80,18 +85,34 @@ export default function Dashboard() {
 
         {/* Upload */}
         <div className="border-2 border-dashed border-orange-300 rounded-2xl p-6 text-center bg-white">
-          <input type="file" accept="application/pdf" id="fileUpload" hidden onChange={(e) => setFile(e.target.files[0])} />
+          <input
+            type="file"
+            accept="application/pdf"
+            id="fileUpload"
+            hidden
+            onChange={(e) => setFile(e.target.files[0])}
+          />
           <label htmlFor="fileUpload" className="cursor-pointer">
             <div className="text-5xl">📄</div>
-            <p className="mt-2 font-semibold text-gray-700">Click to upload or drop your scheme PDF</p>
+            <p className="mt-2 font-semibold text-gray-700">
+              Click to upload or drop your scheme PDF
+            </p>
           </label>
         </div>
 
-        <button onClick={handleUpload} disabled={loading} className="w-full mt-6 py-3 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-orange-500 to-green-600 shadow-xl disabled:opacity-60">
+        <button
+          onClick={handleUpload}
+          disabled={loading}
+          className="w-full mt-6 py-3 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-orange-500 to-green-600 shadow-xl disabled:opacity-60"
+        >
           {loading ? "🔍 Analyzing scheme..." : "🚀 Analyze Scheme"}
         </button>
 
-        {loading && <div className="mt-6 text-center text-gray-600 animate-pulse">Reading document • Understanding policy • Extracting benefits...</div>}
+        {loading && (
+          <div className="mt-6 text-center text-gray-600 animate-pulse">
+            Reading document • Understanding policy • Extracting benefits...
+          </div>
+        )}
 
         {/* ================= RESULTS ================= */}
         {data && (
@@ -99,7 +120,10 @@ export default function Dashboard() {
 
             {/* Language Switch */}
             <div className="flex justify-end">
-              <button onClick={() => setLang(lang === "en" ? "hi" : "en")} className="px-4 py-1.5 rounded-full bg-black text-white text-sm shadow">
+              <button
+                onClick={() => setLang(lang === "en" ? "hi" : "en")}
+                className="px-4 py-1.5 rounded-full bg-black text-white text-sm shadow"
+              >
                 🌐 Switch to {lang === "en" ? "Hindi" : "English"}
               </button>
             </div>
@@ -144,8 +168,19 @@ export default function Dashboard() {
             {/* ===== Eligibility Checker ===== */}
             <div className="bg-yellow-50 border border-yellow-300 p-5 rounded-2xl">
               <h3 className="font-bold text-yellow-700 mb-2 text-lg">🔍 Quick Eligibility Check</h3>
-              <input type="text" placeholder="Enter your profession / category" value={eligibilityInput} onChange={(e) => setEligibilityInput(e.target.value)} className="border p-2 rounded w-full mb-2" />
-              <button onClick={handleEligibilityCheck} className="px-4 py-2 rounded-xl bg-yellow-500 text-white text-sm">Check Eligibility</button>
+              <input
+                type="text"
+                placeholder="Enter your profession / category"
+                value={eligibilityInput}
+                onChange={(e) => setEligibilityInput(e.target.value)}
+                className="border p-2 rounded w-full mb-2"
+              />
+              <button
+                onClick={handleEligibilityCheck}
+                className="px-4 py-2 rounded-xl bg-yellow-500 text-white text-sm"
+              >
+                Check Eligibility
+              </button>
               {eligibilityResult && <p className="mt-2 text-gray-700">{eligibilityResult}</p>}
             </div>
 
