@@ -1,16 +1,13 @@
 // services/ragService.js
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
-const apiKey = process.env.GEMINI_API_KEY || "AIzaSyD_TEST_KEY_REPLACE_ME";
-const genAI = new GoogleGenerativeAI(apiKey);
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 export const processRAG = async (text) => {
   try {
-    console.log("Using Gemini API with text length:", text.length);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
-    });
+    console.log("Using Groq API with text length:", text.length);
 
     const truncatedText =
       text.length > 12000 ? text.substring(0, 12000) + "..." : text;
@@ -45,10 +42,16 @@ Document:
 ${truncatedText}
 `;
 
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-70b-versatile", // very strong + stable
+      messages: [
+        { role: "system", content: "You extract and structure government scheme information." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.2,
+    });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let cleanText = response.text().trim();
+    let cleanText = completion.choices[0].message.content.trim();
 
     cleanText = cleanText.replace(/```json\s*/g, "").replace(/```\s*/g, "");
 
@@ -69,11 +72,11 @@ ${truncatedText}
     return safeResponse;
 
   } catch (error) {
-    console.error("Gemini API error:", error.message);
+    console.error("Groq API error:", error);
 
     return {
       scheme_name: "Government Scheme",
-      summary: "AI processing failed. Please check your API key or try again.",
+      summary: "AI processing failed. Please try again.",
       benefits: [],
       eligibility: [],
       documents: [],

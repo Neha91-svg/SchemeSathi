@@ -18,15 +18,14 @@ export const uploadPDF = async (req, res) => {
       throw new Error("No text extracted from PDF");
     }
 
-    // 1️⃣ English structured data
+    // 1️⃣ English structured data (Groq now)
     const englishData = await processRAG(text);
 
-    // 2️⃣ Hindi translation
+    // 2️⃣ Hindi translation (⚠️ check this file)
     const hindiData = await translateToHindi(englishData);
 
     fs.unlinkSync(filePath);
 
-    // 3️⃣ Send both
     res.json({
       success: true,
       english: englishData,
